@@ -43,6 +43,25 @@
 `define OPxor 12'h000C
 
 
+
+module decode(opout, dest, src, ir, sp);
+output reg `OP opout;
+output reg `HALFWORD sp;
+output reg `WORD dest, src;
+input `WORD ir;
+
+always @(ir) begin
+  case (ir `OPCODE)
+  		`OPadd: begin
+				dest = sp - 1;
+				src = sp;
+				sp = sp - 1;
+		end
+	endcase
+end
+endmodule
+
+
 module processor(halt, reset, clk); // operator input removed
 output reg halt;
 input clk, reset;
@@ -310,25 +329,3 @@ module testbench;
   	$finish;
 	end
 endmodule
-
-
-`define OP	[4:0]
-
-
-module decode(opout, dest, src, ir, sp);
-output reg `OP opout;
-output reg `HALFWORD sp;
-output reg `WORD dest, src;
-input `WORD ir;
-
-always @(ir) begin
-  case (ir `OPCODE)
-  		`OPadd: begin
-				dest = sp - 1;
-				src = sp;
-				sp = sp - 1;
-		end
-	endcase
-end
-endmodule
-
