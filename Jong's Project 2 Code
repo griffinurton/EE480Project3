@@ -1,1 +1,162 @@
+// Code your design here
+// Basic Sizes
+`define WORD	[15:0]
+`define Opcode	[15:12]
+`define Arg	[11:0]
+`define ArgSize 12
+`define ExtraOp [4:0]
+`define REGSIZE [15:0]
+`define REGNUM [255:0]
+`define STKSIZE [7:0]
+`define MEMSIZE [65535:0]
+`define PRESIZE [3:0]
+`define STATE [4:0]
 
+// Op code values
+`define Pre 4'b0000
+`define Jump 4'b0001
+`define JumpF 4'b0010
+`define JumpT 4'b0011
+`define Call 4'b0100
+`define Push 4'b0101
+`define Pop	4'b1000
+`define Put	4'b1001
+`define Get	4'b1010
+`define ALUop 4'b1110
+`define NoArg 4'b1111
+
+// State Values
+`define Start 5'b11111
+`define Startn 5'b11110
+`define Add 5'b10000
+`define And 5'b10001
+`define Sub 5'b10010
+`define Or 5'b10011
+`define Xor 5'b10100
+`define Lt 5'b10101
+`define Dup 5'b11000
+`define Load 5'b11001
+`define Ret 5'b11010
+`define Store 5'b11011
+`define Sys 5'b11100
+`define Test 5'b11101
+
+//Various things
+`define False 0
+`define True 1
+
+
+module processor(halt, reset, clk);
+output reg halt;
+input reset, clk;
+
+reg `REGSIZE regfile `REGNUM;
+reg `REGSIZE mainmem `MEMSIZE;
+reg `REGSIZE pc;
+reg `STKSIZE sp;
+reg `STATE s;
+reg torf;
+reg preload;
+reg `PRESIZE prefix;
+reg `WORD ir;
+wire `STKSIZE sptemp;
+wire `REGSIZE regout, regout2;
+wire `REGSIZE pctemp;
+  
+  alu processorALU(ir `ExtraOp, regfile[sp-1], regfile[sp], regout, sp, sptemp, clk);
+  prefixer jumppre(preload, prefix, pc[15:12], ir `Arg, pctemp, clk);
+  prefixer pushpre(preload, prefix, {4{ir [`ArgSize-1]}}, ir `Arg, regout2, clk);
+always @(reset) begin
+  halt = 0;
+  pc = 0;
+  sp = 0;
+  s = `Start;
+  torf = `False;
+  preload = `False;
+  prefix = 0;
+  $readmemh0(regfile);
+  $readmemh1(mainmem);
+end
+  
+  
+always @(posedge clk) begin
+  case (s)
+    `Start: begin ir <= mainmem[pc]; s <= `Startn; end
+    `Startn: begin
+             pc <= pc + 1;            // bump pc
+      case (ir `Opcode)
+        	 `NoArg: s <= ir `ExtraOp;		//Some instructions, state # is in arg field
+            default: s <= ir `Opcode; // most instructions, state # is opcode
+	     endcase
+	    end
+    
+   
+    //a stands for regfile[sp-1]
+    //b stands for regfile[sp]
+    //c stands for regfile[sp+1]
+    //d stands for regfile[sp-ir`Arg]
+    
+    `ALUop: begin sp <= sptemp; regfile[sp-1] <= regout; end
+    `Pre: begin prefix <= (ir `Arg>> 12); preload <= `True; end
+    `Jump: begin	pc <= pctemp; end
+    `JumpF: begin	if(~torf) pc <= pctemp; end
+    `JumpT:	begin if(torf) pc <= pctemp; end
+    `Call: begin regfile[sp+1] <= pc + 1; pc <= pctemp; sp<=sp+1; end
+    `Push: begin sp <= sp+1; regfile[sp+1] <= regout2;  end
+    `Pop: begin if(ir `Arg > sp) sp <= 0; else sp <= sp-ir`Arg; end
+    `Put: begin if(ir `Arg < sp+1) regfile[sp-ir`Arg] <= regfile[sp]; end
+    `Get: begin if(ir `Arg < sp+1) regfile[sp+1] <= regfile[sp-ir`Arg]; sp <= sp+1; end 
+    `Dup: begin sp <= sp + 1; regfile[sp+1] = regfile[sp]; end
+    `Load: begin regfile[sp] <= mainmem[regfile[sp]]; end
+    `Ret: begin pc <= regfile[sp]; sp <= sp - 1; end
+    `Store: begin sp <= sp - 1; mainmem[regfile[sp-1]] <= regfile[sp]; end
+    `Test: begin sp <= sp - 1; torf <= (regfile[sp] != 0); end
+
+    default: halt <= 1;
+  endcase
+end
+endmodule
+        
+//The ALU module for inside the processor
+module alu(op, d, s, out, spin, spout, clk);
+input clk;
+input `ExtraOp op;
+input `REGSIZE d;
+input `REGSIZE s;
+input `STKSIZE spin;
+output reg `REGSIZE out;
+output reg `STKSIZE spout;
+
+
+always @(posedge clk) begin
+spout <= spin-1;
+
+case (op)
+
+  `Add: out <= d+s;
+  `And: out <= d&s;
+  `Sub: out <= d-s;
+  `Or: out <= d|s;
+  `Xor: out <= d^s;
+  `Lt: out <= d<s;
+endcase
+end
+endmodule     
+
+//The prefix module
+//out is pc
+module prefixer(preload, pre, src, destination, out, clk);
+input clk;
+input preload;
+input [3:0] src;
+input [3:0] pre;
+input [11:0] destination;
+output reg [15:0] out;
+  always @(posedge clk) begin
+    if(preload)
+      out <= {pre, destination};
+   else
+     out <= {src, destination};
+end
+    
+endmodule
