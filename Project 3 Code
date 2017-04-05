@@ -3,13 +3,14 @@
 //Griffin Urton, Baiyoke Nateesuwan, Jong Yeu Wu
 
 // standard sizes
-`define STATE [4:0]
-`define WORD [15:0]
-'define HALFWORD [7:0]
-`define REGSIZE [255:0]   
-`define MEMSIZE [65535:0]
-`define Opcode [15:12]
-`define Immed [11:0]
+`define STATE		[4:0]
+`define OP			[4:0]
+`define WORD		[15:0]
+'define HALFWORD	[7:0]
+`define REGSIZE		[255:0]   
+`define MEMSIZE		[65535:0]
+`define Opcode		[15:12]
+`define Immed		[11:0]
 
 // initial states
 `define Start	5'b11111
@@ -45,7 +46,7 @@
 module processor(halt, reset, clk); // operator input removed
 output reg halt;
 input clk, reset;
-reg `STATE s = `Start;
+reg `STATE s = `Start;	
 reg `WORD regfile `REGSIZE;
 reg `WORD mainmem `MEMSIZE;
 
@@ -311,34 +312,23 @@ module testbench;
 endmodule
 
 
-`define OP		[4:0]
-`define RNAME	[5:0]
-`define WORD	[15:0]
+`define OP	[4:0]
 
-module decode(opout, regdst, opin, ir);
+
+module decode(opout, dest, src, ir, sp);
 output reg `OP opout;
-output reg `RNAME regdst;
-input wire `OP opin;
+output reg `HALFWORD sp;
+output reg `WORD dest, src;
 input `WORD ir;
 
-always @(opin, ir) begin
-  if (opin == ir) begin
-    opout = `OPnop;   // 2nd word of li becomes nop
-    regdst = 0;	  	  // no writing
-  end else begin
-    case (ir `Opcode)
-      `OPjzsz: begin
-        regdst = 0;		   // no writing
-        case (ir `Src)	           // use Src as extended opcode
-          `SRCsys: opout = `OPsys;
-          `SRCsz: opout = `OPsz;
-          default: opout = `OPjz;
-        endcase
-      end
-      `OPst: begin opout = ir `Opcode; regdst <= 0; end
-      default: begin opout = ir `Opcode; regdst <= ir `Dest; end
-    endcase
-  end
+always @(ir) begin
+  case (ir `OPCODE)
+  		`OPadd: begin
+				dest = sp - 1;
+				src = sp;
+				sp = sp - 1;
+		end
+	endcase
 end
 endmodule
 
