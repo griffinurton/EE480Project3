@@ -309,3 +309,36 @@ module testbench;
   	$finish;
 	end
 endmodule
+
+
+`define OP		[4:0]
+`define RNAME	[5:0]
+`define WORD	[15:0]
+
+module decode(opout, regdst, opin, ir);
+output reg `OP opout;
+output reg `RNAME regdst;
+input wire `OP opin;
+input `WORD ir;
+
+always @(opin, ir) begin
+  if (opin == ir) begin
+    opout = `OPnop;   // 2nd word of li becomes nop
+    regdst = 0;	  	  // no writing
+  end else begin
+    case (ir `Opcode)
+      `OPjzsz: begin
+        regdst = 0;		   // no writing
+        case (ir `Src)	           // use Src as extended opcode
+          `SRCsys: opout = `OPsys;
+          `SRCsz: opout = `OPsz;
+          default: opout = `OPjz;
+        endcase
+      end
+      `OPst: begin opout = ir `Opcode; regdst <= 0; end
+      default: begin opout = ir `Opcode; regdst <= ir `Dest; end
+    endcase
+  end
+end
+endmodule
+
