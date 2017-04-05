@@ -1,0 +1,13 @@
+.noarg := 0:4 .this:12
+.alias .noarg 1 Add And Dup Load Lt Or Ret Store Sub Sys Test Xor
+.imm12 .i12 := .this:4 .i12:12
+.alias .imm12 1 Get Pop Put
+.control .i16 ?((.&0xf000)==(.i16&0xf000)) := .this:4 .i16:12
+.control .i16 := 8:4 0:8 (.i16>>12):4 .this:4 .i16:12
+.alias .control 4 Call JumpF Jump JumpT
+Pre .i16 := 8:4 0:8 (.i16>>12):4
+Push .i16 ?(((.i16&0xf800)==0xf800)||((.i16&0xf800)==0)) := 9:4 .i16:12
+Push .i16 := 9:4 0:8 (.i16>>12):4 9:4 .i16:12
+.segment .text 16 0x10000 0 .VMEM
+.segment .data 16 0x10000 0x8000 .VMEM
+.const 0 .lowfirst ; was wrong endian
