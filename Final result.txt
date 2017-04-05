@@ -1,0 +1,249 @@
+`define WORD [15:0]
+`define REGSIZE [255:0]
+`define MEMSIZE [256*256-1:0]
+`define STATE	[4:0]
+`define Opcode	[15:12]
+
+// opcode values, also state numbers
+`define OPAdd	    4'b0000	 								
+`define OPSub	    4'b0001	          						
+`define OPAnd	    4'b0010	 				    
+`define OPOr	    4'b0011							
+`define OPXor	    4'b0100				    
+`define OPTest	    4'b0101    		
+`define OPLt	    4'b0110			
+`define OPDup	    4'b0111					
+`define OPLoad	    4'b1000 	 		
+`define OPStore     4'b1001 			
+`define OPRet	    4'b1010				 
+`define OPSys	    4'b1011	 			
+
+// opcode values, also state numbers  (with immediate 12)
+
+`define OPALU	    4'b0000
+`define OPPut	    4'b1000 
+`define OPPop	    4'b1001 
+`define OPGet	    4'b1010 
+
+`define Start	    5'b11111
+`define Start1	    5'b11110      
+
+// opcode value with immediate 16
+
+`define OPCall	    4'b0010   	
+`define OPJumpF	    4'b0011 
+`define OPJumpT	    4'b0100
+`define OPJump	    4'b0101
+`define OPPre	    4'b0110 	
+`define OPPush	    4'b0111 	
+
+module processor(halt, reset, clk);
+output reg halt;
+input reset, clk;
+
+reg `WORD register `REGSIZE;
+reg `WORD memory `MEMSIZE;
+reg `WORD pc = 0;
+reg `WORD ir;
+reg [3:0] pre;
+reg torf;  // 1bit
+reg [7:0]sp = 0;
+reg [15:0] d;
+reg `STATE s = `Start;
+
+always @(reset) begin
+  halt = 0;
+  pc = 0;
+  s = `Start;
+  $readmemh0(register);
+  $readmemh1(memory);
+end
+
+always @(posedge clk) begin
+  case (s)
+    `Start: begin ir <= memory[pc]; s <= `Start1; end
+    `Start1: begin
+             pc <= pc + 1;            // bump pc
+             s <= ir `Opcode; // most instructions, state # is opcode
+	     end
+	
+     `OPALU: begin $display("no arg");
+			case(ir[3:0])
+				`OPAdd: begin 
+					register[sp-1] <= register[sp-1] + register[sp];
+					sp <= sp - 1;
+
+                    s <= `Start;
+					end
+
+				`OPSub: begin
+					register[sp-1] <= register[sp-1] - register[sp];
+					sp <= sp - 1;
+
+                    s <= `Start;
+					end
+
+				`OPAnd: begin
+					register[sp-1] <= register[sp-1] & register[sp];
+					sp <= sp - 1;
+					
+					s <= `Start;
+					end
+
+				`OPOr: begin
+					register[sp-1] <= register[sp-1] | register[sp];
+					sp <= sp - 1;
+					
+					s <= `Start;
+					end
+
+				`OPXor: begin
+					register[sp-1] <= register[sp-1] ^ register[sp];
+					sp <= sp - 1;
+					
+					s <= `Start;
+					end
+
+				`OPTest: begin
+					torf <= (register[sp] !== 0);
+					sp <= sp - 1;
+					
+					s <= `Start;
+					end
+
+				`OPLt: begin
+					register[sp-1] <= (register[sp-1] < register[sp]);
+					sp <= sp - 1;
+					
+					s <= `Start;
+					end
+
+				`OPDup: begin
+					register[sp+1] <= register[sp];
+					sp <= sp + 1;
+
+                    s <= `Start;
+					end
+
+				`OPLoad: begin
+					memory[sp] <= memory[register[sp]];
+
+                    s <= `Start;
+					end
+
+				`OPStore: begin
+					memory[register[sp-1]] <= register[sp];
+					register[sp-1] <= register[sp];
+					sp <= sp - 1;
+
+                    s <= `Start;
+					end
+
+				`OPRet: begin
+					pc <= register[sp];
+					sp <= sp - 1;
+
+                    s <= `Start;
+					end
+					
+					//default: halt = 1;
+
+			endcase
+            end
+		
+		// 12 bit immediate instuction
+			
+		`OPPut: begin
+			register[sp-ir[11:0]] <= register[sp];
+
+            s <= `Start;
+            end
+
+		`OPPop: begin
+			sp <= sp -(ir[11:0]);
+
+            s <= `Start;
+            end
+
+		`OPGet: begin 
+			register[sp+1] <= register[sp-ir[11:0]];
+			sp <= sp + 1;
+
+            s <= `Start;
+			end
+			
+		// 16 bit immediate instruction 
+		
+		`OPCall: begin
+			d <= sp + 1;        
+			register[d]<= pc + 1;
+			sp <= sp + 1;
+			pc <= {pre,ir[11:0]};
+
+            s <= `Start;
+			end
+
+		`OPJumpF: begin
+			if (!torf)
+				pc <= {pre,ir[11:0]};
+
+            s <= `Start;
+			end
+
+		`OPJumpT: begin
+			if (torf)
+				pc <= {pre,ir[11:0]};
+                        
+            s <= `Start;
+			end
+
+		`OPJump: begin
+			pc <= {pre,ir[11:0]};
+
+
+            s <= `Start;
+            end
+
+		`OPPush: begin
+			sp <= sp + 1;
+			register[sp + 1] <= {pre,ir[11:0]};
+
+            s <= `Start;
+			end
+			
+		`OPPre:  begin
+			pre <= ir[3:0];	
+
+            s <= `Start;
+            end 
+
+
+		default: halt <= 1;
+
+		endcase
+	end
+endmodule
+
+module testbench;
+reg reset = 0;
+reg clk = 0;
+wire halted;
+processor PE(halted, reset, clk);
+initial begin
+  $dumpfile;
+  $dumpvars(0, PE);
+  #10 reset = 1;
+  #10 reset = 0;
+  while (!halted) begin
+    #10 clk = 1;
+    #10 clk = 0;
+  end
+  $finish;
+end
+endmodule
+
+
+
+	
+
+	
