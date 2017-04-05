@@ -1,7 +1,7 @@
 //testing!!!!!!!!!!!!!!!!!!!!!!
 //Assignment 3
 //EE480 Spring 2017
-//Griffin Urton, Baiyoke Nateesuwan, Jong Yeu
+//Griffin Urton, Baiyoke Nateesuwan, Jong Yeu Wu
 
 // standard sizes
 `define STATE [4:0]
