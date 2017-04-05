@@ -42,7 +42,7 @@
 `define OPxor 12'h000C
 
 
-module main (halt, reset, clk); // operator input removed
+module processor(halt, reset, clk); // operator input removed
 output reg halt;
 input clk, reset;
 //input `WORD operator;
