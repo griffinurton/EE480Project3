@@ -1,11 +1,12 @@
-//testing, can you call see this??
-//Assignment 2
+
+//Assignment 3
 //EE480 Spring 2017
-//Angelo Stekardis, Darren Curry, Ted Ferguson, Griffin Urton
+//Griffin Urton, Baiyoke Nateesuwan, Jong Yeu
 
 // standard sizes
-	`define STATE [4:0]
-`define WORD	[15:0]
+`define STATE [4:0]
+`define WORD [15:0]
+'define HALFWORD [7:0]
 `define REGSIZE [255:0]   
 `define MEMSIZE [65535:0]
 `define Opcode [15:12]
@@ -54,8 +55,8 @@ reg `WORD mainmem `MEMSIZE;
 
     
 
-reg [7:0] sp;
-reg `WORD pc;
+reg `HALFWORD sp[1:0];
+reg `WORD pc[1:0];
 // reg `WORD cpuStack `REGSIZE;
 reg [3:0] prefix;
 reg `WORD ir;   	// Register that holds instruction spec code
