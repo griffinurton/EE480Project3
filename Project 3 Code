@@ -53,6 +53,7 @@ reg `WORD mainmem `MEMSIZE;
 
 reg `HALFWORD sp[1:0];
 reg `WORD pc[1:0];
+reg `WORD dest, src;
 reg [3:0] prefix;
 reg `WORD ir;   	// Register that holds instruction spec code
 reg torf;       	// True or false register
@@ -92,7 +93,7 @@ case (s)
    		 case (ir `Immed)
 
    		 // ADD: d=sp-1; s=sp; --sp; reg[d]+=reg[s];
-   		 `OPadd: begin 
+   		 `OPadd: begin
 		 	//$display("Add REG1: %d REG2: %d SP: %d", regfile[sp], regfile[sp-1], sp); 
 			regfile[sp-1] = (regfile[sp-1] + regfile[sp]); sp = sp - 1; 
 			s = `Start; 
