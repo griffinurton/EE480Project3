@@ -51,8 +51,8 @@ reg `WORD mainmem `MEMSIZE;
 
     
 
-reg `HALFWORD sp[1:0];
-reg `WORD pc[1:0];
+reg `HALFWORD sp;
+reg `WORD pc;
 reg `WORD dest, src;
 reg [3:0] prefix;
 reg `WORD ir;   	// Register that holds instruction spec code
