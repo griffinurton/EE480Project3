@@ -1,0 +1,256 @@
+//Assignment 2
+//EE480 Spring 2017
+//Angelo Stekardis, Darren Curry, Ted Ferguson, Griffin Urton
+
+// standard sizes
+	`define STATE [4:0]
+`define WORD	[15:0]
+`define REGSIZE [255:0]   
+`define MEMSIZE [65535:0]
+`define Opcode [15:12]
+`define Immed [11:0]
+
+// initial states
+`define Start	5'b11111
+`define GetOp   5'b11110
+
+// opcode values/ state numbers
+`define NOimmed 4'b0000
+`define OPget 4'b0001
+`define OPpop 4'b0010
+`define OPput 4'b0011
+`define OPcall 4'b 0100
+`define OPjumpf 4'b0101
+`define OPjump 4'b0110
+`define OPjumpt 4'b0111
+`define OPpre 4'b1000
+`define OPpush 4'b1001
+
+// secondary opcode field values
+`define OPadd 12'h0001
+`define OPand 12'h0002
+`define OPdup 12'h0003
+`define OPload 12'h0004
+`define OPlt 12'h0005
+`define OPor 12'h0006
+`define OPret 12'h0007
+`define OPstore 12'h0008
+`define OPsub 12'h0009
+`define OPsys 12'h000A
+`define OPtest 12'h000B
+`define OPxor 12'h000C
+
+
+module main (halt, reset, clk); // operator input removed
+output reg halt;
+input clk, reset;
+//input `WORD operator;
+//wire [3:0] opcode;
+//wire [11:0] operand;
+reg `STATE s = `Start;
+reg `WORD regfile `REGSIZE;
+reg `WORD mainmem `MEMSIZE;
+
+    
+
+reg [7:0] sp;
+reg `WORD pc;
+// reg `WORD cpuStack `REGSIZE;
+reg [3:0] prefix;
+reg `WORD ir;   	// Register that holds instruction spec code
+reg torf;       	// True or false register
+reg preEmpty;	// Register describing the state of pre (loaded = 0, not loaded = 1)
+//16 positions on the stack?
+
+//assign opcode = operator[15:12];
+assign operand = operator[11:0];
+
+always @ (reset) begin
+	pc = 0;
+	halt = 0;
+	s = `Start;
+	sp = 0;
+	torf = 0;
+	preEmpty = 1;
+	$readmemh1(mainmem);
+    $display("Reset");
+end
+
+always @(posedge clk)
+begin
+
+case (s)
+    // Initial State
+    `Start: begin
+   	 ir = mainmem[pc];
+   	 s = `GetOp;
+    end
+
+    // Get Operation
+    `GetOp: begin
+   	 pc = pc + 1;
+   	 s = ir `Opcode;
+    end
+
+   	 
+    //Without Immed
+	`NOimmed:
+   	 begin
+   		 case (ir `Immed)
+
+   		 // ADD: d=sp-1; s=sp; --sp; reg[d]+=reg[s];
+   		 `OPadd: begin $display("Add REG1: %d REG2: %d SP: %d", regfile[sp], regfile[sp-1], sp); regfile[sp-1] = (regfile[sp-1] + regfile[sp]); sp = sp - 1; s = `Start; $display("Add Result: %d",regfile[sp]); end
+                   	 
+   		 // AND: d=sp-1; s=sp; --sp; reg[d]&=reg[s];
+   		 `OPand: begin $display("And REG1: %d REG2: %d SP: %d", regfile[sp], regfile[sp-1], sp); regfile[sp-1] = (regfile[sp-1] & regfile[sp]); sp = sp - 1; s = `Start; $display("And Result: %d",regfile[sp]); end
+           	 
+   		 // DUP: d=sp+1; s=sp; ++sp; reg[d]=reg[s];
+   		 `OPdup: begin regfile[sp+1] = regfile[sp]; sp = sp + 1; s = `Start; $display("Dup"); end
+
+   		 // LOAD: d=sp; reg[d]=mem[reg[d]];
+   		 `OPload: begin regfile[sp] = mainmem[regfile[sp]]; $display("Load"); s <= `Start; end
+
+   		 // LT: d=sp-1; s=sp; --sp; reg[d]=(reg[d] < reg[s]);
+   		 `OPlt: begin $display("LT REG1: %d REG2: %d SP: %d", regfile[sp], regfile[sp-1], sp); regfile[sp-1] = (regfile[sp-1] < regfile[sp]); sp = sp - 1; s = `Start; $display("LT Result: %d", regfile[sp]); end
+
+   		 // OR: d=sp-1; s=sp; --sp; reg[d]|=reg[s];
+   		 `OPor: begin $display("OR REG1: %d REG2: %d SP: %d", regfile[sp], regfile[sp-1], sp); regfile[sp-1] = (regfile[sp-1] | regfile[sp]); sp  = sp - 1; s = `Start; $display("OR Result: %d", regfile[sp]); end
+
+   		 // RET: s=sp; --sp; pc=reg[s];
+   		 `OPret: begin pc <= regfile[sp]; sp <= sp - 1; s <= `Start; $display("Ret"); end
+
+   		 // STORE: d=sp-1; s=sp; --sp; mem[reg[d]]=reg[s]; reg[d]=reg[s];
+   		 `OPstore:
+   			 begin
+   			 $display("Store");
+   			 mainmem[regfile[sp-1]] = regfile[sp];
+   			 regfile[sp-1] = regfile[sp];
+   			 sp = sp - 1;
+   			 s = `Start;
+   		 end
+
+   		 // SUB: d=sp-1; s=sp; --sp; reg[d]-=reg[s];
+   		 `OPsub: begin regfile[sp-1] = (regfile[sp-1] - regfile[sp]); sp = sp - 1; s = `Start; $display("Sub"); end
+
+   		 // SYS: “Does a bunch of things..” whatever that means
+   		 `OPsys: begin halt = 1; $display("Sys Halt"); end
+
+   		 // TEST: s=sp; --sp; torf = (reg[s] != 0); I think this part requires an if statement
+   		 `OPtest: begin $display("Test %d", regfile[sp]); if(regfile[sp] != 0) torf = 1; else torf = 0; sp = sp - 1; s = `Start; end
+
+   		 // XOR: d=sp-1; s=sp; --sp; reg[d]^=reg[s];
+   		 `OPxor: begin regfile[sp-1] = (regfile[sp-1] ^ regfile[sp]); sp = sp - 1; s = `Start; $display("Xor"); end
+
+   	 endcase
+    end
+   	 
+    //With `Immed
+
+    //GET:  d=sp+1; s=sp-unsigned(immed12); ++sp; reg[d]=reg[s]
+    `OPget: begin regfile[sp + 1] = regfile[sp - ir `Immed]; sp = sp +1; s = `Start; $display("Get"); end
+
+    //POP:  sp-=unsigned(immed12)
+    `OPpop: begin sp = (sp - ir `Immed); s = `Start; $display("Pop"); end
+
+    //PUT: d=sp-unsigned(immed12); s=sp; reg[d]=reg[s]
+    `OPput: begin regfile[sp - ir `Immed] = regfile[sp]; s = `Start; $display("Put"); end
+
+    //CALL:  d=sp+1; ++sp; reg[d]=pc+1; pc=prefix({(pc>>12), immed12})
+    `OPcall: begin
+	regfile[sp + 1] = pc;// + 1;
+	sp = sp + 1;
+		if(!preEmpty) begin
+		   	pc = {prefix, ir `Immed};
+		   	preEmpty = 1;
+   	 	end
+    else begin pc = ir`Immed; end
+   	s = `Start;
+   	$display("Call");
+	end
+
+    //JUMPF: if (!torf) pc=prefix({(pc>>12), immed12});
+    `OPjumpf: begin
+    $display("JumpF");
+    if(!torf) begin
+   	 if(!preEmpty) begin
+   		 pc = {prefix, ir `Immed};
+   		 preEmpty = 1;
+    	end
+    	else begin
+        	pc = ir `Immed;
+    	end
+    end
+	s = `Start;
+    end
+
+
+//JUMP: pc=prefix({(pc>>12), immed12})
+`OPjump: begin
+    $display("Jump");
+    if(!preEmpty) begin
+   	 pc = {prefix, ir `Immed};
+   	 preEmpty = 1;
+	end
+	else begin
+    	pc = ir `Immed;
+	end
+	s = `Start;
+end
+
+
+//JUMPT: if (torf) pc=prefix({(pc>>12), immed12})
+`OPjumpt: begin
+$display("JumpT");
+if(torf) begin
+	if(!preEmpty) begin
+		pc = {prefix, ir `Immed};
+		preEmpty = 1;
+        end
+    else begin
+        pc = ir `Immed;
+        end
+end
+s = `Start;
+end
+
+//PRE: pre=unsigned(immed16)>>12; preEmpty = 0;
+`OPpre: begin
+$display("Pre");
+prefix <= (ir[11:0] >> 8);
+preEmpty = 0;
+s = `Start;
+end
+
+//PUSH: d=sp+1; ++sp; reg[d]=prefix(sign_extend(immed12));
+`OPpush: begin
+   	 sp = sp + 1;
+   	 if(ir[11]) begin prefix = 4'b1111; end
+   	 else begin prefix = 4'b0000; end
+   	 regfile[sp] = {prefix, ir `Immed};
+   	 $display("Push SP: %d REG: %d", sp, regfile[sp]);
+   	 s = `Start;
+    end
+endcase
+end
+endmodule // main
+
+module testbench;
+	reg reset = 0;
+	reg clk = 0;
+	wire halted;
+	main PE(halted, reset, clk);
+	initial begin
+  	$dumpfile;
+  	$dumpvars(0, PE);
+  	#10 reset = 1;
+  	#10 reset = 0;
+  	while (!halted) begin
+    	#10 clk = 1;
+   	#10 clk = 0;
+ 	end
+  	$finish;
+	end
+endmodule
+
+
+
