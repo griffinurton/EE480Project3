@@ -57,6 +57,66 @@ always @(ir) begin
 				src = sp;
 				sp = sp - 1;
 		end
+		
+		`OPand: begin
+				dest = sp - 1;
+				src = sp;
+				sp = sp - 1;
+		end
+		
+		`OPdup: begin
+				dest = sp + 1;
+				src = sp;
+				sp = sp + 1;
+		end
+		
+		`OPload: begin
+				dest = sp;
+		end
+		
+		`OPlt: begin
+				dest = sp - 1;
+				src = sp;
+				sp = sp - 1;
+		end
+		
+		`OPor: begin
+				dest = sp - 1;
+				src = sp;
+				sp = sp - 1;
+		end
+		
+		`OPret: begin
+				src = sp;
+				sp = sp - 1;
+		end
+		
+		`OPstore: begin
+				dest = sp - 1;
+				src = sp;
+				sp = sp - 1;
+		end
+		
+		`OPsub: begin
+				dest = sp - 1;
+				src = sp;
+				sp = sp - 1;
+		end
+		
+		`OPsys: begin
+				// does not do anything
+		end
+		
+		`OPtest: begin
+				src = sp;
+				sp = sp - 1;
+		end
+		
+		`OPxor: begin
+				dest = sp - 1;
+				src = sp;
+				sp = sp - 1;
+		end	
 	endcase
 end
 endmodule
