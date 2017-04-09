@@ -198,7 +198,7 @@ always@(posedge clk) thread = !thread;
 
 decode mydecode(sp[thread], dest[thread], src[thread], prefix[thread], preEmpty[thread], preFlag[thread], ir[thread]);
 
-always @(*)
+always @(thread) ir[thread] = mainmem[pc[thread]];
 begin
 
 case (s)
