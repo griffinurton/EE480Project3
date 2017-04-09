@@ -3,14 +3,16 @@
 //Griffin Urton, Baiyoke Nateesuwan, Jong Yeu Wu
 
 // standard sizes
+`define ARRAY		[1:0]
 `define STATE		[4:0]
 `define OP			[4:0]
 `define WORD		[15:0]
 'define HALFWORD	[7:0]
-`define REGSIZE		[255:0]   
+`define REGSIZE		[511:0]   
 `define MEMSIZE		[65535:0]
 `define Opcode		[15:12]
 `define Immed		[11:0]
+`define PREFIX		[3:0]
 
 // initial states
 `define Start	5'b11111
@@ -44,126 +46,177 @@
 
 
 
-module decode(opout, dest, src, ir, sp);
+module decode(opout, sp, dest, src, prefix, preEmpty, preFlag, ir);
 output reg `OP opout;
 output reg `HALFWORD sp;
 output reg `WORD dest, src;
+output reg `PREFIX prefix;
+output reg preEmpty;
+input preFlag;
 input `WORD ir;
 
-always @(ir) begin
-  case (ir `OPCODE)
-  		`OPadd: begin
-				dest = sp - 1;
-				src = sp;
-				sp = sp - 1;
-		end
+always @(ir[thread]) begin
+  case (ir[thread] `OPCODE)
+  		`NOimmed: begin
+		case(ir[thread] `Immed)
+	  		`OPadd: begin
+					dest[thread] = sp[thread] - 1;
+					src[thread] = sp[thread];
+					sp[thread] = sp[thread] - 1;
+			end
 		
-		`OPand: begin
-				dest = sp - 1;
-				src = sp;
-				sp = sp - 1;
-		end
+			`OPand: begin
+					dest[thread] = sp[thread] - 1;
+					src[thread] = sp[thread];
+					sp[thread] = sp[thread] - 1;
+			end
+			
+			`OPdup: begin
+					dest[thread] = sp[thread] + 1;
+					src[thread] = sp[thread];
+					sp[thread] = sp[thread] + 1;
+			end
 		
-		`OPdup: begin
-				dest = sp + 1;
-				src = sp;
-				sp = sp + 1;
-		end
+			`OPload: begin
+					dest[thread] = sp[thread];
+			end
 		
-		`OPload: begin
-				dest = sp;
-		end
+			`OPlt: begin
+					dest[thread] = sp[thread] - 1;
+					src[thread] = sp[thread];
+					sp[thread] = sp[thread] - 1;
+			end
 		
-		`OPlt: begin
-				dest = sp - 1;
-				src = sp;
-				sp = sp - 1;
-		end
+			`OPor: begin
+					dest[thread] = sp[thread] - 1;
+					src[thread] = sp[thread];
+					sp[thread] = sp[thread] - 1;
+			end
 		
-		`OPor: begin
-				dest = sp - 1;
-				src = sp;
-				sp = sp - 1;
-		end
+			`OPret: begin
+					src[thread] = sp[thread];
+					sp[thread] = sp[thread] - 1;
+			end
 		
-		`OPret: begin
-				src = sp;
-				sp = sp - 1;
-		end
+			`OPstore: begin
+					dest[thread] = sp[thread] - 1;
+					src[thread] = sp[thread];
+					sp[thread] = sp[thread] - 1;
+			end
 		
-		`OPstore: begin
-				dest = sp - 1;
-				src = sp;
-				sp = sp - 1;
-		end
+			`OPsub: begin
+					dest[thread] = sp[thread] - 1;
+					src[thread] = sp[thread];
+					sp[thread] = sp[thread] - 1;
+			end
 		
-		`OPsub: begin
-				dest = sp - 1;
-				src = sp;
-				sp = sp - 1;
-		end
 		
-		`OPsys: begin
-				// does not do anything
-		end
+			`OPtest: begin
+					src[thread] = sp[thread];
+					sp[thread] = sp[thread] - 1;
+			end
 		
-		`OPtest: begin
-				src = sp;
-				sp = sp - 1;
-		end
-		
-		`OPxor: begin
-				dest = sp - 1;
-				src = sp;
-				sp = sp - 1;
-		end	
-	endcase
+			`OPxor: begin
+					dest[thread] = sp[thread] - 1;
+					src[thread] = sp[thread];
+					sp[thread] = sp[thread] - 1;
+			end	
+		endcase
+	end
+	
+    `OPget: begin 
+    		dest[thread] = sp[thread] + 1;
+			src[thread] = sp[thread] - ir[thread] `Immed;
+			sp[thread] = sp[thread] + 1;
+	end
+
+    `OPpop: begin 
+    		sp[thread] = sp[thread] - ir[thread] `Immed;
+	end
+
+    `OPput: begin 
+    		dest[thread] = sp[thread] - ir[thread] `Immed;
+			src[thread] = sp[thread];
+	end
+
+    //CALL:  d=sp+1; ++sp; reg[d]=pc+1; pc=prefix({(pc>>12), immed12})
+    `OPcall: begin
+		dest[thread] = sp[thread] + 1;
+		sp[thread] = sp[thread] + 1;
+	end
+   
+//PRE: pre=unsigned(immed16)>>12; preEmpty = 0;
+`OPpre: begin
+	prefix[thread] = (ir[thread] >> 12);
+	preEmpty[thread] = 0;
+end
+
+//PUSH: d=sp+1; ++sp; reg[d]=prefix(sign_extend(immed12));
+`OPpush: begin
+   	 sp = sp + 1;
+   	 if(ir[11]) begin prefix = 4'b1111; end
+   	 else begin prefix = 4'b0000; end
+   	 regfile[sp] = {prefix, ir `Immed};
+   	 //$display("Push SP: %d REG: %d", sp, regfile[sp]);
+   	 s = `Start;
+    end
+endcase
 end
 endmodule
 
 
 module processor(halt, reset, clk); // operator input removed
-output reg halt;
-input clk, reset;
+output reg halt `ARRAY;
+input clk `ARRAY, reset `ARRAY;
 reg `STATE s = `Start;	
 reg `WORD regfile `REGSIZE;
 reg `WORD mainmem `MEMSIZE;
 
     
 
-reg `HALFWORD sp;
-reg `WORD pc;
-reg `WORD dest, src;
-reg [3:0] prefix;
-reg `WORD ir;   	// Register that holds instruction spec code
-reg torf;       	// True or false register
-reg preEmpty;	// Register describing the state of pre (loaded = 0, not loaded = 1)
+reg `HALFWORD sp `ARRAY;
+reg `WORD pc `ARRAY;
+reg `WORD dest `ARRAY, src `ARRAY;
+reg `PREFIX prefix `ARRAY;
+reg `WORD ir `ARRAY;   	// Register that holds instruction spec code
+reg torf `ARRAY;       	// True or false register
+reg preEmpty `ARRAY;	// Register describing the state of pre (loaded = 0, not loaded = 1)
+reg preFlag `ARRAY 		// Flag used to alert preEmpty owner that pre needs to be written
 
 
 always @ (reset) begin
-	pc = 0;
-	halt = 0;
-	s = `Start;
-	sp = 0;
-	torf = 0;
-	preEmpty = 1;
+	pc[thread] = 0;
+	pc[!thread] = 0;
+	halt[thread] = 0;
+	halt[!thread] = 0;
+	sp[thread] = 0;
+	sp[!thread] = 0;
+	torf[thread] = 0;
+	torf[!thread] = 0;
+	preEmpty[thread] = 1;
+	preEmpty[!thread] = 1;
 	$readmemh1(mainmem);
 end
 
-always @(posedge clk)
+// Toggle thread each clock cycle
+always@(posedge clk) thread = !thread;
+
+decode mydecode(
+
+always @(*)
 begin
 
 case (s)
     // Initial State
     `Start: begin
-   	 ir = mainmem[pc];
+   	 ir[thread] = mainmem[pc[thread]];
    	 s = `GetOp;
     end
 
     // Get Operation
     `GetOp: begin
-   	 pc = pc + 1;
-   	 s = ir `Opcode;
+   	 pc[thread] = pc[thread] + 1;
+   	 s = ir[thread] `Opcode;
     end
 
    	 
