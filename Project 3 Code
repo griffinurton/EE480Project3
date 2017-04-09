@@ -5,7 +5,7 @@
 // standard sizes
 `define ARRAY		[1:0]
 `define STATE		[4:0]
-`define OP			[4:0]
+`define OP		[4:0]
 `define WORD		[15:0]
 'define HALFWORD	[7:0]
 `define REGSIZE		[511:0]   
@@ -175,7 +175,7 @@ reg `PREFIX prefix `ARRAY;
 reg `WORD ir `ARRAY;   	// Register that holds instruction spec code
 reg torf `ARRAY;       	// True or false register
 reg preEmpty `ARRAY;	// Register describing the state of pre (loaded = 0, not loaded = 1)
-reg preFlag `ARRAY 		// Flag used to alert preEmpty owner that pre needs to be written
+reg preFlag `ARRAY 	// Flag used to alert preEmpty owner that pre needs to be written
 reg thread;
 
 
