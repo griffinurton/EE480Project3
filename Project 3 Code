@@ -168,9 +168,7 @@ always @(op, in1, in2) begin
   case (op)
     `OPadd: begin result = in1 + in2; end
     `OPand: begin result = in1 & in2; end
-    `OPany: begin result = |in1; end
     `OPor: begin result = in1 | in2; end
-    `OPshr: begin result = in1 >> 1; end
     `OPxor: begin result = in1 ^ in2; end
     default: begin result = in1; end
   endcase
