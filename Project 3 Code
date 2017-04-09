@@ -170,6 +170,8 @@ always @(op, in1, in2) begin
     `OPand: begin result = in1 & in2; end
     `OPor: begin result = in1 | in2; end
     `OPxor: begin result = in1 ^ in2; end
+    `OPsub: begin result = in1 - in2; end
+    `OPlt: begin result = in1 < in2; end
     default: begin result = in1; end
   endcase
 end
