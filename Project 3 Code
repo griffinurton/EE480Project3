@@ -158,6 +158,24 @@ always @(ir) begin
 end
 endmodule
 
+//ALU
+module alu(result, op, in1, in2);
+output reg `WORD result;
+input wire `OP op;
+input wire `WORD in1, in2;
+
+always @(op, in1, in2) begin
+  case (op)
+    `OPadd: begin result = in1 + in2; end
+    `OPand: begin result = in1 & in2; end
+    `OPany: begin result = |in1; end
+    `OPor: begin result = in1 | in2; end
+    `OPshr: begin result = in1 >> 1; end
+    `OPxor: begin result = in1 ^ in2; end
+    default: begin result = in1; end
+  endcase
+end
+endmodule
 
 module processor(halt, reset, clk); // operator input removed
 output reg halt `ARRAY;
@@ -427,31 +445,7 @@ endcase
 end
 endmodule // processor
 
-//ALU
-module alu(op, d, s, out, spin, spout, clk);
-input clk;
-input `Immed op;
-input `WORD d;
-input `WORD s;
-input `HALFWORD spin;
-output reg `REGSIZE out;
-output reg `STKSIZE spout;
-
-
-always @(posedge clk) begin
-spout <= spin-1;
-
-case (op)
-
-  `Add: out <= d+s;
-  `And: out <= d&s;
-  `Sub: out <= d-s;
-  `Or: out <= d|s;
-  `Xor: out <= d^s;
-  `Lt: out <= d<s;
-endcase
-end
-endmodule     
+     
 module testbench;
 	reg reset = 0;
 	reg clk = 0;
