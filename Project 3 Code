@@ -430,10 +430,10 @@ endmodule // processor
 //ALU
 module alu(op, d, s, out, spin, spout, clk);
 input clk;
-input `ExtraOp op;
-input `REGSIZE d;
-input `REGSIZE s;
-input `STKSIZE spin;
+input `Immed op;
+input `WORD d;
+input `WORD s;
+input `HALFWORD spin;
 output reg `REGSIZE out;
 output reg `STKSIZE spout;
 
