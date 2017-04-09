@@ -46,8 +46,7 @@
 
 
 
-module decode(opout, sp, dest, src, prefix, preEmpty, preFlag, ir);
-output reg `OP opout;
+module decode(sp, dest, src, prefix, preEmpty, preFlag, ir);
 output reg `HALFWORD sp;
 output reg `WORD dest, src;
 output reg `PREFIX prefix;
@@ -55,112 +54,107 @@ output reg preEmpty;
 input preFlag;
 input `WORD ir;
 
-always @(ir[thread]) begin
-  case (ir[thread] `OPCODE)
+always @(ir) begin
+  case (ir `OPCODE)
   		`NOimmed: begin
-		case(ir[thread] `Immed)
+		case(ir `Immed)
 	  		`OPadd: begin
-					dest[thread] = sp[thread] - 1;
-					src[thread] = sp[thread];
-					sp[thread] = sp[thread] - 1;
+					dest = sp - 1;
+					src = sp;
+					sp = sp - 1;
 			end
 		
 			`OPand: begin
-					dest[thread] = sp[thread] - 1;
-					src[thread] = sp[thread];
-					sp[thread] = sp[thread] - 1;
+					dest = sp - 1;
+					src = sp;
+					sp = sp - 1;
 			end
 			
 			`OPdup: begin
-					dest[thread] = sp[thread] + 1;
-					src[thread] = sp[thread];
-					sp[thread] = sp[thread] + 1;
+					dest = sp + 1;
+					src = sp;
+					sp = sp + 1;
 			end
 		
 			`OPload: begin
-					dest[thread] = sp[thread];
+					dest = sp;
 			end
 		
 			`OPlt: begin
-					dest[thread] = sp[thread] - 1;
-					src[thread] = sp[thread];
-					sp[thread] = sp[thread] - 1;
+					dest = sp - 1;
+					src = sp;
+					sp = sp - 1;
 			end
 		
 			`OPor: begin
-					dest[thread] = sp[thread] - 1;
-					src[thread] = sp[thread];
-					sp[thread] = sp[thread] - 1;
+					dest = sp - 1;
+					src = sp;
+					sp = sp - 1;
 			end
 		
 			`OPret: begin
-					src[thread] = sp[thread];
-					sp[thread] = sp[thread] - 1;
+					src = sp;
+					sp = sp - 1;
 			end
 		
 			`OPstore: begin
-					dest[thread] = sp[thread] - 1;
-					src[thread] = sp[thread];
-					sp[thread] = sp[thread] - 1;
+					dest = sp - 1;
+					src = sp;
+					sp = sp - 1;
 			end
 		
 			`OPsub: begin
-					dest[thread] = sp[thread] - 1;
-					src[thread] = sp[thread];
-					sp[thread] = sp[thread] - 1;
+					dest = sp - 1;
+					src = sp;
+					sp = sp - 1;
 			end
 		
 		
 			`OPtest: begin
-					src[thread] = sp[thread];
-					sp[thread] = sp[thread] - 1;
+					src = sp;
+					sp = sp - 1;
 			end
 		
 			`OPxor: begin
-					dest[thread] = sp[thread] - 1;
-					src[thread] = sp[thread];
-					sp[thread] = sp[thread] - 1;
+					dest = sp - 1;
+					src = sp;
+					sp = sp - 1;
 			end	
 		endcase
 	end
 	
     `OPget: begin 
-    		dest[thread] = sp[thread] + 1;
-			src[thread] = sp[thread] - ir[thread] `Immed;
-			sp[thread] = sp[thread] + 1;
+    		dest = sp + 1;
+			src = sp - ir `Immed;
+			sp = sp + 1;
 	end
 
     `OPpop: begin 
-    		sp[thread] = sp[thread] - ir[thread] `Immed;
+    		sp = sp - ir `Immed;
 	end
 
     `OPput: begin 
-    		dest[thread] = sp[thread] - ir[thread] `Immed;
-			src[thread] = sp[thread];
+    		dest = sp - ir `Immed;
+			src = sp;
 	end
 
-    //CALL:  d=sp+1; ++sp; reg[d]=pc+1; pc=prefix({(pc>>12), immed12})
+
     `OPcall: begin
-		dest[thread] = sp[thread] + 1;
-		sp[thread] = sp[thread] + 1;
+		dest = sp + 1;
+		sp = sp + 1;
 	end
    
-//PRE: pre=unsigned(immed16)>>12; preEmpty = 0;
-`OPpre: begin
-	prefix[thread] = (ir[thread] >> 12);
-	preEmpty[thread] = 0;
-end
 
-//PUSH: d=sp+1; ++sp; reg[d]=prefix(sign_extend(immed12));
-`OPpush: begin
-   	 sp = sp + 1;
-   	 if(ir[11]) begin prefix = 4'b1111; end
-   	 else begin prefix = 4'b0000; end
-   	 regfile[sp] = {prefix, ir `Immed};
-   	 //$display("Push SP: %d REG: %d", sp, regfile[sp]);
-   	 s = `Start;
-    end
-endcase
+	`OPpre: begin
+		prefix = (ir >> 12);
+		preEmpty = 0;
+	end
+
+	`OPpush: begin
+   		 dest = sp + 1;
+		 sp = sp + 1;
+   	 end
+	endcase
 end
 endmodule
 
@@ -182,6 +176,7 @@ reg `WORD ir `ARRAY;   	// Register that holds instruction spec code
 reg torf `ARRAY;       	// True or false register
 reg preEmpty `ARRAY;	// Register describing the state of pre (loaded = 0, not loaded = 1)
 reg preFlag `ARRAY 		// Flag used to alert preEmpty owner that pre needs to be written
+reg thread;
 
 
 always @ (reset) begin
@@ -201,7 +196,7 @@ end
 // Toggle thread each clock cycle
 always@(posedge clk) thread = !thread;
 
-decode mydecode(
+decode mydecode(sp[thread], dest[thread], src[thread], prefix[thread], preEmpty[thread], preFlag[thread], ir[thread]);
 
 always @(*)
 begin
@@ -423,9 +418,6 @@ end
     end
 endcase
 end
-
-//ALU
-
 endmodule // processor
 
 module testbench;
