@@ -199,6 +199,13 @@ always@(posedge clk) thread = !thread;
 decode mydecode(sp[thread], dest[thread], src[thread], prefix[thread], preEmpty[thread], preFlag[thread], ir[thread]);
 
 always @(thread) ir[thread] = mainmem[pc[thread]];
+
+always(*) begin
+	dest_value[thread] = regfile[thread ? dest[thread] + 256: dest[thread]];
+	src_value[thread] = regfile[thread ? src[thread] + 256 : src[thread]];
+	end
+
+
 begin
 
 case (s)
