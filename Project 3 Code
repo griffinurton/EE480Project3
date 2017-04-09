@@ -420,6 +420,31 @@ endcase
 end
 endmodule // processor
 
+//ALU
+module alu(op, d, s, out, spin, spout, clk);
+input clk;
+input `ExtraOp op;
+input `REGSIZE d;
+input `REGSIZE s;
+input `STKSIZE spin;
+output reg `REGSIZE out;
+output reg `STKSIZE spout;
+
+
+always @(posedge clk) begin
+spout <= spin-1;
+
+case (op)
+
+  `Add: out <= d+s;
+  `And: out <= d&s;
+  `Sub: out <= d-s;
+  `Or: out <= d|s;
+  `Xor: out <= d^s;
+  `Lt: out <= d<s;
+endcase
+end
+endmodule     
 module testbench;
 	reg reset = 0;
 	reg clk = 0;
