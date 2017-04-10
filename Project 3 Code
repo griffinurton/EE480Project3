@@ -350,9 +350,11 @@ endmodule // processor
 
      
 module testbench;
-	reg reset = 0;
+	reg reset `ARRAY;
+	reset[0] = 0;
+	reset[1] = 0;
 	reg clk = 0;
-	wire halted;
+	wire halted `ARRAY;
 	processor PE(halted, reset, clk);
 	initial begin
   	$dumpfile;
