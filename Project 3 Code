@@ -245,16 +245,20 @@ end
 
 decode mydecode(sp_wire, dest_wire, src_wire, prefix_wire, preEmpty_wire, preFlag[thread], ir[thread]);
 
-always @(thread) ir[thread] = mainmem[pc[thread]];
+always @(posedge clk) begin ir[thread] = mainmem[pc[thread]];
+pc[thread] = pc[thread] + 2;
+end
 
-always @(*) begin
-	dest_value[thread] = regfile[thread ? dest[thread] + 256: dest[thread]];
-	src_value[thread] = regfile[thread ? src[thread] + 256 : src[thread]];
+always @(posedge clk) begin
+	dest_value[thread] = regfile[dest[thread]];
+	//regfile[thread ? dest[thread] + 256: dest[thread]];
+	src_value[thread] = regfile[dest[thread]];
+	//regfile[thread ? src[thread] + 256 : src[thread]];
 end
 
 alu stackALU(result_value, ir[thread] `Immed, dest_value[thread], src_value[thread]);
 
-always @(*) begin
+always @(posedge clk) begin
 
 case (ir[thread] `Opcode)
    	 
@@ -363,7 +367,7 @@ case (ir[thread] `Opcode)
 	 default: begin writeFlag[thread] = 0; end
 endcase
 end
-always @(*)
+always @(posedge clk)
 if(!halt[thread] && writeFlag[thread]) regfile[dest[thread]] = dest_value[thread];
 //regfile[thread ? dest[thread] + 256 : dest[thread]] = dest_value[thread];
 endmodule // processor
