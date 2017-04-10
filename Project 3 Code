@@ -47,10 +47,10 @@
 
 
 module decode(sp, dest, src, prefix, preEmpty, preFlag, ir);
-output reg `HALFWORD sp;
-output reg `WORD dest, src;
-output reg `PREFIX prefix;
-output reg preEmpty;
+output `HALFWORD sp;
+output `WORD dest, src;
+output `PREFIX prefix;
+output preEmpty;
 input preFlag;
 input `WORD ir;
 
@@ -194,8 +194,8 @@ reg `WORD mainmem `MEMSIZE;
 
 reg `HALFWORD sp `ARRAY;
 reg `WORD pc `ARRAY;
-reg `WORD dest `ARRAY; 
-reg `WORD src `ARRAY;
+wire `WORD dest `ARRAY; 
+wire `WORD src `ARRAY;
 reg `WORD dest_value `ARRAY;
 reg `WORD src_value `ARRAY;
 reg `WORD result_value `ARRAY;
