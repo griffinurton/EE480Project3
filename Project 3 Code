@@ -184,8 +184,8 @@ end
 endmodule
 
 module processor(halt, reset, clk); // operator input removed
-output reg halt `ARRAY;
-input clk `ARRAY;
+output reg halt[1:0];
+input clk`ARRAY;
 input reset `ARRAY;
 // reg `STATE s = `Start;	
 reg `WORD regfile `REGSIZE;
@@ -195,7 +195,10 @@ reg `WORD mainmem `MEMSIZE;
 
 reg `HALFWORD sp `ARRAY;
 reg `WORD pc `ARRAY;
-reg `WORD dest `ARRAY, src `ARRAY;
+reg `WORD dest `ARRAY, 
+reg `WORD src `ARRAY;
+reg `WORD dest_value `ARRAY;
+reg `WORD src_value `ARRAY;
 reg `PREFIX prefix `ARRAY;
 reg `WORD ir `ARRAY;   	// Register that holds instruction spec code
 reg torf `ARRAY;       	// True or false register
