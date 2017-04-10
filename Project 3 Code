@@ -247,7 +247,7 @@ case (ir[thread] `Opcode)
 		
 		default: begin
 			alu stackALU(dest_value[thread], ir[thread] `Immed, dest_value[thread], src_value[thread]);
-			regfile[thread ? dest[thead] + 256 : dest[thead]] = dest_value[thread];
+			//regfile[thread ? dest[thead] + 256 : dest[thead]] = dest_value[thread];
 			end
 			
 
@@ -256,37 +256,29 @@ case (ir[thread] `Opcode)
    	 
     //With `Immed
 
-    //GET:  d=sp+1; s=sp-unsigned(immed12); ++sp; reg[d]=reg[s]
-    `OPget: begin 
+	//GET:  d=sp+1; s=sp-unsigned(immed12); ++sp; reg[d]=reg[s]
+	`OPget: begin 
     		if(!halt[thread]) begin
-    		
+    			dest_value[thread] = src_value[thread];
+		end
 	end
 
-    //POP:  sp-=unsigned(immed12)
-    `OPpop: begin 
-    		sp = (sp - ir `Immed); 
-		s = `Start; 
-		//$display("Pop"); 
+	//PUT: d=sp-unsigned(immed12); s=sp; reg[d]=reg[s]
+	`OPput: begin 
+		if(!halt[thread]) begin
+		dest_value = src_value;
+		end
 	end
 
-    //PUT: d=sp-unsigned(immed12); s=sp; reg[d]=reg[s]
-    `OPput: begin 
-    		regfile[sp - ir `Immed] = regfile[sp]; 
-		s = `Start; 
-		//$display("Put"); 
-	end
-
-    //CALL:  d=sp+1; ++sp; reg[d]=pc+1; pc=prefix({(pc>>12), immed12})
-    `OPcall: begin
-		regfile[sp + 1] = pc;// + 1;
-		sp = sp + 1;
-		if(!preEmpty) begin
-		   	pc = {prefix, ir `Immed};
-		   	preEmpty = 1;
-   	 	end
-    	else begin pc = ir`Immed; end
-   		s = `Start;
-   		//$display("Call");
+	//CALL:  d=sp+1; ++sp; reg[d]=pc+1; pc=prefix({(pc>>12), immed12})
+	`OPcall: begin
+		if(!halt[thread]) begin
+			dest_value = pc[thread] + 1;
+			if(!preEmpty) begin
+		   		pc[thread] = {prefix[thread], ir `Immed};
+		   		preFlag[thread] = 1;
+   	 		end
+    			else begin pc[thread] = ir`Immed; end
 	end
 
     //JUMPF: if (!torf) pc=prefix({(pc>>12), immed12});
