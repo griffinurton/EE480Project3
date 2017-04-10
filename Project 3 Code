@@ -9,7 +9,7 @@
 `define WORD		[15:0]
 `define HALFWORD	[7:0]
 `define REGSIZE		[511:0]   
-`define MEMSIZE		[131071:0]
+`define MEMSIZE		[65035:0]
 `define Opcode		[15:12]
 `define Immed		[11:0]
 `define PREFIX		[3:0]
@@ -216,18 +216,16 @@ reg halt `ARRAY;
 
 
 always @ (reset) begin
-	pc[thread] = 0;
-	pc[!thread] = 0;
-	halt[thread] = 0;
-	halt[!thread] = 0;
-	sp[thread] = 0;
-	sp[!thread] = 0;
-//	torf[thread] = 0;
-//	torf[!thread] = 0;
-	preEmpty[thread] = 1;
-	preEmpty[!thread] = 1;
-	writeFlag[thread] = 1;
-	writeFlag[!thread] = 1;
+	pc[0] = 0;
+	pc[1] = 0;
+	halt[0] = 0;
+	halt[1] = 0;
+	sp[0] = 0;
+	sp[1] = 0;
+	preEmpty[0] = 1;
+	preEmpty[1] = 1;
+	writeFlag[0] = 1;
+	writeFlag[1] = 1;
 	$readmemh1(mainmem);
 end
 
