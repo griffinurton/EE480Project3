@@ -7,7 +7,7 @@
 `define STATE		[4:0]
 `define OP		[4:0]
 `define WORD		[15:0]
-'define HALFWORD	[7:0]
+`define HALFWORD	[7:0]
 `define REGSIZE		[511:0]   
 `define MEMSIZE		[65535:0]
 `define Opcode		[15:12]
