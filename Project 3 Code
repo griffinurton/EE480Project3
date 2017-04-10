@@ -164,7 +164,7 @@ endmodule
 //ALU
 module alu(result, op, in1, in2);
 output reg `WORD result;
-input wire `OP op;
+input wire `Immed op;
 input wire `WORD in1; 
 input wire `WORD in2;
 
@@ -252,9 +252,7 @@ case (ir[thread] `Opcode)
 			
 		`OPtest: begin torf = (src_value[thread] ? 1 : 0); writeFlag[thread] = 0; end
 		
-		default: begin
-			alu stackALU(result_value[thread], ir[thread] `Immed, dest_value[thread], src_value[thread]);
-			end
+		default: alu stackALU(result_value[thread], ir[thread] `Immed, dest_value[thread], src_value[thread]);
 			
 
    	endcase
