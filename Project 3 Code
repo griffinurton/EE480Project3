@@ -185,7 +185,8 @@ endmodule
 
 module processor(halt, reset, clk); // operator input removed
 output reg halt `ARRAY;
-input clk `ARRAY, reset `ARRAY;
+input clk `ARRAY;
+input reset `ARRAY;
 // reg `STATE s = `Start;	
 reg `WORD regfile `REGSIZE;
 reg `WORD mainmem `MEMSIZE;
