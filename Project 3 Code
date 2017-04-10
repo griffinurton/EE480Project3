@@ -7,7 +7,7 @@
 `define STATE		[4:0]
 `define OP		[4:0]
 `define WORD		[15:0]
-`define HALFWORD	[7:0]
+'define HALFWORD	[7:0]
 `define REGSIZE		[511:0]   
 `define MEMSIZE		[65535:0]
 `define Opcode		[15:12]
@@ -146,7 +146,7 @@ always @(ir) begin
    
 
 	`OPpre: begin
-		prefix = (ir >> 12);
+		prefix = (ir[11:8] >> 8);
 		preEmpty = 0;
 	end
 
@@ -155,6 +155,7 @@ always @(ir) begin
 		 sp = sp + 1;
    	 end
 	endcase
+preEmpty = (preFlag ? 1 : 0);
 end
 endmodule
 
@@ -162,16 +163,18 @@ endmodule
 module alu(result, op, in1, in2);
 output reg `WORD result;
 input wire `OP op;
-input wire `WORD in1, in2;
+input wire `WORD in1, `WORD in2;
 
 always @(op, in1, in2) begin
-  case (op)
+  case (op) // in1 = dest_value, in2 = src_value
     `OPadd: begin result = in1 + in2; end
     `OPand: begin result = in1 & in2; end
+    `OPdup: begin result = in2; end
+    `OPload: begin result = mainmem[in1]; end
+    `OPlt: begin result = (in1 < in2); end
     `OPor: begin result = in1 | in2; end
-    `OPxor: begin result = in1 ^ in2; end
     `OPsub: begin result = in1 - in2; end
-    `OPlt: begin result = in1 < in2; end
+    `OPxor: begin result = in1 ^ in2; end
     default: begin result = in1; end
   endcase
 end
@@ -180,7 +183,7 @@ endmodule
 module processor(halt, reset, clk); // operator input removed
 output reg halt `ARRAY;
 input clk `ARRAY, reset `ARRAY;
-reg `STATE s = `Start;	
+// reg `STATE s = `Start;	
 reg `WORD regfile `REGSIZE;
 reg `WORD mainmem `MEMSIZE;
 
@@ -204,8 +207,8 @@ always @ (reset) begin
 	halt[!thread] = 0;
 	sp[thread] = 0;
 	sp[!thread] = 0;
-	torf[thread] = 0;
-	torf[!thread] = 0;
+//	torf[thread] = 0;
+//	torf[!thread] = 0;
 	preEmpty[thread] = 1;
 	preEmpty[!thread] = 1;
 	$readmemh1(mainmem);
@@ -226,121 +229,28 @@ always(*) begin
 
 begin
 
-case (s)
-    // Initial State
-    `Start: begin
-   	 ir[thread] = mainmem[pc[thread]];
-   	 s = `GetOp;
-    end
-
-    // Get Operation
-    `GetOp: begin
-   	 pc[thread] = pc[thread] + 1;
-   	 s = ir[thread] `Opcode;
-    end
-
+case (ir[thread] `Opcode)
    	 
-    //Without Immed
 	`NOimmed:
-   	 begin
-   		 case (ir `Immed)
+   	begin
+   	case (ir `Immed)
+		 
+   		`OPret: begin pc[thread] = src_value[thread]; end
 
-   		 // ADD: d=sp-1; s=sp; --sp; reg[d]+=reg[s];
-   		 `OPadd: begin
-		 	//$display("Add REG1: %d REG2: %d SP: %d", regfile[sp], regfile[sp-1], sp); 
-			regfile[sp-1] = (regfile[sp-1] + regfile[sp]); sp = sp - 1; 
-			s = `Start; 
-			//$display("Add Result: %d",regfile[sp]); 
-		end
-                   	 
-   		 // AND: d=sp-1; s=sp; --sp; reg[d]&=reg[s];
-   		 `OPand: begin 
-		 	//$display("And REG1: %d REG2: %d SP: %d", regfile[sp], regfile[sp-1], sp); 
-			regfile[sp-1] = (regfile[sp-1] & regfile[sp]); sp = sp - 1; s = `Start; 
-			//$display("And Result: %d",regfile[sp]); 
-		end
-           	 
-   		 // DUP: d=sp+1; s=sp; ++sp; reg[d]=reg[s];
-   		 `OPdup: begin 
-		 	regfile[sp+1] = regfile[sp]; sp = sp + 1; 
-			s = `Start; $display("Dup"); 
-		end
+   		`OPstore: begin mainmem[dest_value[thread]] = src_value[thread]; end
 
-   		 // LOAD: d=sp; reg[d]=mem[reg[d]];
-   		 `OPload: begin 
-		 	regfile[sp] = mainmem[regfile[sp]]; 
-			//$display("Load"); 
-			s <= `Start; 
-		end
-
-   		 // LT: d=sp-1; s=sp; --sp; reg[d]=(reg[d] < reg[s]);
-   		 `OPlt: begin 
-		 	//$display("LT REG1: %d REG2: %d SP: %d", regfile[sp], regfile[sp-1], sp); 
-		 	regfile[sp-1] = (regfile[sp-1] < regfile[sp]); 
-		 	sp = sp - 1; 
-		 	s = `Start; 
-		 	//$display("LT Result: %d", regfile[sp]); 
-		 end
-
-   		 // OR: d=sp-1; s=sp; --sp; reg[d]|=reg[s];
-   		 `OPor: begin 
-		 	//$display("OR REG1: %d REG2: %d SP: %d", regfile[sp], regfile[sp-1], sp); 
-		 	regfile[sp-1] = (regfile[sp-1] | regfile[sp]); 
-			sp  = sp - 1; s = `Start; 
-			//$display("OR Result: %d", regfile[sp]); 
-		end
-
-   		 // RET: s=sp; --sp; pc=reg[s];
-   		 `OPret: begin
-		 	pc <= regfile[sp]; 
-			sp <= sp - 1;
-			s <= `Start; 
-			//$display("Ret"); 
+   		`OPsys: begin halt[thread] = 1; end
+			
+		`OPtest: begin torf = (src_value[thread] ? 1 : 0); end
+		
+		default: begin
+			alu stackALU(dest_value[thread], ir[thread] `Immed, dest_value[thread], src_value[thread]);
+			regfile[thread ? dest[thead] + 256 : dest[thead]] = dest_value[thread];
 			end
+			
 
-   		 // STORE: d=sp-1; s=sp; --sp; mem[reg[d]]=reg[s]; reg[d]=reg[s];
-   		 `OPstore:
-   			 begin
-   			 //$display("Store");
-   			 mainmem[regfile[sp-1]] = regfile[sp];
-   			 regfile[sp-1] = regfile[sp];
-   			 sp = sp - 1;
-   			 s = `Start;
-   		 end
-
-   		 // SUB: d=sp-1; s=sp; --sp; reg[d]-=reg[s];
-   		 `OPsub: begin 
-		 	regfile[sp-1] = (regfile[sp-1] - regfile[sp]); 
-			sp = sp - 1; 
-			s = `Start; 
-			//$display("Sub"); 
-		end
-
-   		 // SYS: “Does a bunch of things..” whatever that means
-   		 `OPsys: begin 
-		 	halt = 1; 
-			//$display("Sys Halt"); 
-		end
-
-   		 // TEST: s=sp; --sp; torf = (reg[s] != 0); I think this part requires an if statement
-   		 `OPtest: begin 
-		 	//$display("Test %d", regfile[sp]); 
-			if(regfile[sp] != 0) torf = 1; 
-			else torf = 0; 
-			sp = sp - 1; 
-			s = `Start; 
-		end
-
-   		 // XOR: d=sp-1; s=sp; --sp; reg[d]^=reg[s];
-   		 `OPxor: begin 
-		 	regfile[sp-1] = (regfile[sp-1] ^ regfile[sp]); 
-			sp = sp - 1; 
-			s = `Start; 
-			//$display("Xor"); 
-		end
-
-   	 endcase
-    end
+   	endcase
+    	end
    	 
     //With `Immed
 
