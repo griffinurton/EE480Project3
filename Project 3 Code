@@ -217,15 +217,16 @@ reg halt `ARRAY;
 
 always @ (reset) begin
 	pc[0] = 0;
-	pc[1] = 0;
+	pc[1] = 1;
 	halt[0] = 0;
 	halt[1] = 0;
 	sp[0] = 0;
-	sp[1] = 0;
+	sp[1] = 256;
 	preEmpty[0] = 1;
 	preEmpty[1] = 1;
 	writeFlag[0] = 1;
 	writeFlag[1] = 1;
+thread = 0;
 	$readmemh1(mainmem);
 end
 
@@ -363,7 +364,8 @@ case (ir[thread] `Opcode)
 endcase
 end
 always @(*)
-if(!halt[thread] && writeFlag[thread]) regfile[thread ? dest[thread] + 256 : dest[thread]] = dest_value[thread];
+if(!halt[thread] && writeFlag[thread]) regfile[dest[thread]] = dest_value[thread];
+//regfile[thread ? dest[thread] + 256 : dest[thread]] = dest_value[thread];
 endmodule // processor
 
      
