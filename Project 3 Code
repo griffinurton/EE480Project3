@@ -198,6 +198,7 @@ reg `WORD dest `ARRAY;
 reg `WORD src `ARRAY;
 reg `WORD dest_value `ARRAY;
 reg `WORD src_value `ARRAY;
+reg `WORD result_value `ARRAY;
 reg `PREFIX prefix `ARRAY;
 reg `WORD ir `ARRAY;   	// Register that holds instruction spec code
 reg torf `ARRAY;       	// True or false register
@@ -252,11 +253,12 @@ case (ir[thread] `Opcode)
 		`OPtest: begin torf = (src_value[thread] ? 1 : 0); writeFlag[thread] = 0; end
 		
 		default: begin
-			alu stackALU(dest_value[thread], ir[thread] `Immed, dest_value[thread], src_value[thread]);
+			alu stackALU(result_value[thread], ir[thread] `Immed, dest_value[thread], src_value[thread]);
 			end
 			
 
    	endcase
+	dest_value[thread] <= result_value[thread];
     	end
    	 
     //With `Immed
