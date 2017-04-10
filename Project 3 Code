@@ -275,26 +275,26 @@ case (ir[thread] `Opcode)
 		if(!halt[thread]) begin
 			dest_value = pc[thread] + 1;
 			if(!preEmpty) begin
-		   		pc[thread] = {prefix[thread], ir `Immed};
+		   		pc[thread] = {prefix[thread], ir[thread] `Immed};
 		   		preFlag[thread] = 1;
    	 		end
     			else begin pc[thread] = ir`Immed; end
 	end
 
-    //JUMPF: if (!torf) pc=prefix({(pc>>12), immed12});
-    `OPjumpf: begin
-    	//$display("JumpF");
-    	if(!torf) begin
-   	 	if(!preEmpty) begin
-   			pc = {prefix, ir `Immed};
-   			preEmpty = 1;
-    	end
-    	else begin
-        	pc = ir `Immed;
-    	end
-    end
-	s = `Start;
-    end
+	//JUMPF: if (!torf) pc=prefix({(pc>>12), immed12});
+	`OPjumpf: begin
+		if(!halt[thread]) begin
+    			if(!torf[thread]) begin
+   	 			if(!preEmpty) begin
+   					pc[thread] = {prefix[thread], ir[thread] `Immed};
+   					preFlag[thread] = 1;
+    				end
+    				else begin
+        				pc = ir `Immed;
+    				end
+    			end
+    		end
+	end
 
 
 //JUMP: pc=prefix({(pc>>12), immed12})
