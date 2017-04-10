@@ -147,7 +147,7 @@ always @(ir) begin
    
 
     `OPpre: begin
-		prefix = (ir[11:8] >> 8);
+		prefix = ir[3:0];
 		preEmpty = 0;
 	end
 
