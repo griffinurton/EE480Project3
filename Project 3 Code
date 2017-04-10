@@ -9,7 +9,7 @@
 `define WORD		[15:0]
 `define HALFWORD	[7:0]
 `define REGSIZE		[511:0]   
-`define MEMSIZE		[65535:0]
+`define MEMSIZE		[131071:0]
 `define Opcode		[15:12]
 `define Immed		[11:0]
 `define PREFIX		[3:0]
