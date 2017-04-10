@@ -165,7 +165,8 @@ endmodule
 module alu(result, op, in1, in2);
 output reg `WORD result;
 input wire `OP op;
-input wire `WORD in1, `WORD in2;
+input wire `WORD in1; 
+input wire `WORD in2;
 
 always @(op, in1, in2) begin
   case (op) // in1 = dest_value, in2 = src_value
