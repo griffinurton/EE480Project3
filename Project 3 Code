@@ -350,9 +350,7 @@ endmodule // processor
 
      
 module testbench;
-	reg reset `ARRAY;
-	reset[0] = 0;
-	reset[1] = 0;
+	reg reset = 0;
 	reg clk = 0;
 	wire halted `ARRAY;
 	processor PE(halted, reset, clk);
