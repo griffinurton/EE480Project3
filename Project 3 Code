@@ -55,7 +55,7 @@ input preFlag;
 input `WORD ir;
 
 always @(ir) begin
-  case (ir `OPCODE)
+  case (ir `Opcode)
   		`NOimmed: begin
 		case(ir `Immed)
 	  		`OPadd: begin
