@@ -204,6 +204,7 @@ reg `WORD ir `ARRAY;   	// Register that holds instruction spec code
 reg torf `ARRAY;       	// True or false register
 reg preEmpty `ARRAY;	// Register describing the state of pre (loaded = 0, not loaded = 1)
 reg preFlag `ARRAY 	// Flag used to alert preEmpty owner that pre needs to be written
+reg writeFlag `Array	// Flag to determine whether to write to the stack or not
 reg thread;
 
 
@@ -218,6 +219,8 @@ always @ (reset) begin
 //	torf[!thread] = 0;
 	preEmpty[thread] = 1;
 	preEmpty[!thread] = 1;
+	writeFlag[thread] = 1;
+	writeFlag[!thread] = 1;
 	$readmemh1(mainmem);
 end
 
@@ -233,26 +236,22 @@ always(*) begin
 	src_value[thread] = regfile[thread ? src[thread] + 256 : src[thread]];
 	end
 
-
-begin
-
 case (ir[thread] `Opcode)
    	 
 	`NOimmed:
    	begin
    	case (ir `Immed)
 		 
-   		`OPret: begin pc[thread] = src_value[thread]; end
+   		`OPret: begin pc[thread] = src_value[thread]; writeFlag[thread] = 0; end
 
-   		`OPstore: begin mainmem[dest_value[thread]] = src_value[thread]; end
+   		`OPstore: begin mainmem[dest_value[thread]] = src_value[thread]; writeFlag[thread] = 0; end
 
-   		`OPsys: begin halt[thread] = 1; end
+   		`OPsys: begin halt[thread] = 1; writeFlag[thread] = 0; end
 			
-		`OPtest: begin torf = (src_value[thread] ? 1 : 0); end
+		`OPtest: begin torf = (src_value[thread] ? 1 : 0); writeFlag[thread] = 0; end
 		
 		default: begin
 			alu stackALU(dest_value[thread], ir[thread] `Immed, dest_value[thread], src_value[thread]);
-			//regfile[thread ? dest[thead] + 256 : dest[thead]] = dest_value[thread];
 			end
 			
 
@@ -278,17 +277,18 @@ case (ir[thread] `Opcode)
 	//CALL:  d=sp+1; ++sp; reg[d]=pc+1; pc=prefix({(pc>>12), immed12})
 	`OPcall: begin
 		if(!halt[thread]) begin
-			dest_value = pc[thread] + 1;
-			if(!preEmpty) begin
+			dest_value[thread] = pc[thread] + 1;
+			if(!preEmpty[thread]) begin
 		   		pc[thread] = {prefix[thread], ir[thread] `Immed};
 		   		preFlag[thread] = 1;
    	 		end
-    			else begin pc[thread] = ir`Immed; end
+    			else begin pc[thread] = ir[thread] `Immed; end
 	end
 
 	//JUMPF: if (!torf) pc=prefix({(pc>>12), immed12});
 	`OPjumpf: begin
 		if(!halt[thread]) begin
+			writeFlag[thread] = 0;
     			if(!torf[thread]) begin
    	 			if(!preEmpty) begin
    					pc[thread] = {prefix[thread], ir[thread] `Immed};
@@ -302,54 +302,50 @@ case (ir[thread] `Opcode)
 	end
 
 
-//JUMP: pc=prefix({(pc>>12), immed12})
-`OPjump: begin
-    $display("Jump");
-    if(!preEmpty) begin
-   		pc = {prefix, ir `Immed};
-   		preEmpty = 1;
+	//JUMP: pc=prefix({(pc>>12), immed12})
+	`OPjump: begin
+		if(!halt[thread]) begin
+			writeFlag[thread] = 0;
+			if(!preEmpty[thread]) begin
+   				pc = {prefix[thread], ir[thread] `Immed};
+   				preFlag[thread] = 1;
+			end
+			else begin
+    			pc[thread] = ir[thread] `Immed;
+			end
+		end
 	end
-	else begin
-    	pc = ir `Immed;
+
+
+	//JUMPT: if (torf) pc=prefix({(pc>>12), immed12})
+	`OPjumpt: begin
+		if(!halt[thread]) begin
+			writeFlag[thread] = 0;
+			if(torf[thread]) begin
+				if(!preEmpty[thread]) begin
+				pc = {prefix[thread], ir[thread] `Immed};
+				preFlag[thread] = 1;
+        			end
+			end
+    			else begin
+        			pc[thread] = ir[thread] `Immed;
+        		end
+		end
 	end
-	s = `Start;
-end
 
-
-//JUMPT: if (torf) pc=prefix({(pc>>12), immed12})
-`OPjumpt: begin
-	//$display("JumpT");
-	if(torf) begin
-		if(!preEmpty) begin
-			pc = {prefix, ir `Immed};
-			preEmpty = 1;
-        end
-    	else begin
-        	pc = ir `Immed;
-        end
-	end
-	s = `Start;
-end
-
-//PRE: pre=unsigned(immed16)>>12; preEmpty = 0;
-`OPpre: begin
-	//$display("Pre");
-	prefix <= (ir[11:0] >> 8);
-	preEmpty = 0;
-	s = `Start;
-end
-
-//PUSH: d=sp+1; ++sp; reg[d]=prefix(sign_extend(immed12));
-`OPpush: begin
-   	 sp = sp + 1;
-   	 if(ir[11]) begin prefix = 4'b1111; end
-   	 else begin prefix = 4'b0000; end
-   	 regfile[sp] = {prefix, ir `Immed};
-   	 //$display("Push SP: %d REG: %d", sp, regfile[sp]);
-   	 s = `Start;
-    end
+	//PUSH: d=sp+1; ++sp; reg[d]=prefix(sign_extend(immed12));
+	`OPpush: begin
+		if(!halt[thread]) begin
+			prefix = (ir[thread][11] ? 4b'1111 : 4'b0000);
+			dest_value[thread] = {prefix, ir[thread] `Immed}
+		end
+   	 end
+	 
+	 default: begin writeFlag = 0; end;
 endcase
-end
+
+always @(*)
+if(!halt[thread] && writeFlag) regfile[thread ? dest[thread] + 256 : dest[thread]] = dest_value;
 endmodule // processor
 
      
