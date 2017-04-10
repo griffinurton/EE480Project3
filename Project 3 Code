@@ -236,7 +236,7 @@ always @(thread) ir[thread] = mainmem[pc[thread]];
 always @(*) begin
 	dest_value[thread] = regfile[thread ? dest[thread] + 256: dest[thread]];
 	src_value[thread] = regfile[thread ? src[thread] + 256 : src[thread]];
-	end
+	
 
 case (ir[thread] `Opcode)
    	 
@@ -344,7 +344,7 @@ case (ir[thread] `Opcode)
 	 
 	 default: begin writeFlag = 0; end;
 endcase
-
+end
 always @(*)
 if(!halt[thread] && writeFlag) regfile[thread ? dest[thread] + 256 : dest[thread]] = dest_value;
 endmodule // processor
