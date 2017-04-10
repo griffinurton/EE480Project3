@@ -354,7 +354,7 @@ module testbench;
 	reg reset = 0;
 	reg clk = 0;
 	wire halted;
-	main PE(halted, reset, clk);
+	processor PE(halted, reset, clk);
 	initial begin
   	$dumpfile;
   	$dumpvars(0, PE);
