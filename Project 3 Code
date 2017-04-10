@@ -204,6 +204,7 @@ wire `HALFWORD sp_wire;
 reg `WORD pc `ARRAY;
 reg `WORD new_pc `ARRAY;
 reg `WORD dest `ARRAY; 
+reg `WORD result_reg;
 wire `WORD dest_wire;
 reg `WORD src `ARRAY;
 wire `WORD src_wire;
@@ -220,6 +221,7 @@ reg preFlag `ARRAY; 	// Flag used to alert preEmpty owner that pre needs to be w
 reg writeFlag `ARRAY;	// Flag to determine whether to write to the stack or not
 reg thread;
 wire isJump;
+reg loadFlag;
 reg halt `ARRAY;
 
 
@@ -235,6 +237,7 @@ always @ (reset) begin
 	preEmpty[1] = 1;
 	writeFlag[0] = 1;
 	writeFlag[1] = 1;
+loadFlag = 0;
 thread = 0;
 	$readmemh1(mainmem);
 end
@@ -273,20 +276,21 @@ case (ir[thread] `Opcode)
    	 
 	`NOimmed: begin
    	case (ir[thread] `Immed)
-		 `OPload: begin dest_value[thread] = mainmem[dest_value[thread]]; writeFlag[thread] = 0; end
+		 `OPload: begin result_reg <= mainmem[dest_value[thread]]; writeFlag[thread] = 0; loadFlag = 1; $display("load");
+$display("PC0 PC1 %h %h", pc[0], pc[1]);$display("Reg %h", result_reg); pc[thread] = pc[thread] + 2; end
 		 
-   		`OPret: begin pc[thread] = src_value[thread]; writeFlag[thread] = 0; end
+   		`OPret: begin pc[thread] = src_value[thread]; writeFlag[thread] = 0; pc[thread] = pc[thread] + 2; end
 
-   		`OPstore: begin mainmem[dest_value[thread]] = src_value[thread]; writeFlag[thread] = 0; end
+   		`OPstore: begin mainmem[dest_value[thread]] = src_value[thread]; writeFlag[thread] = 0; pc[thread] = pc[thread] + 2; end
 
-   		`OPsys: begin $display("Sys instruction"); halt[thread] = 1; writeFlag[thread] = 0; end
+   		`OPsys: begin $display("Sys instruction"); halt[thread] = 1; writeFlag[thread] = 0; pc[thread] = pc[thread] + 2; end
 			
-		`OPtest: begin torf[thread] = (src_value[thread] ? 1 : 0); writeFlag[thread] = 0; end
+		`OPtest: begin torf[thread] = (src_value[thread] ? 1 : 0); writeFlag[thread] = 0; pc[thread] = pc[thread] + 2; end
 		
 		default: writeFlag[thread] = 1;
 			
    	endcase
-	dest_value[thread] = result_value;
+	dest_value[thread] = loadFlag ? result_reg : result_value;
     	end
    	 
     //With `Immed
@@ -378,6 +382,7 @@ $display("Jump to %d", new_pc[thread]);
 	 
 	 default: begin writeFlag[thread] = 0; end
 endcase
+
 end
 always @(posedge clk)
 if(!halt[thread] && writeFlag[thread]) regfile[dest[thread]] = dest_value[thread];
@@ -389,6 +394,7 @@ module testbench;
 	reg reset = 0;
 	reg clk = 0;
 	wire halted;
+integer count = 0;
 	processor PE(halted, reset, clk);
 	initial begin
   	$dumpfile;
@@ -398,6 +404,7 @@ module testbench;
   	while (!halted) begin
     	#10 clk = 1;
    	#10 clk = 0;
+count = count + 1;
  	end
   	$finish;
 	end
