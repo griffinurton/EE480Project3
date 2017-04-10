@@ -194,7 +194,7 @@ reg `WORD mainmem `MEMSIZE;
 
 reg `HALFWORD sp `ARRAY;
 reg `WORD pc `ARRAY;
-reg `WORD dest `ARRAY, 
+reg `WORD dest `ARRAY; 
 reg `WORD src `ARRAY;
 reg `WORD dest_value `ARRAY;
 reg `WORD src_value `ARRAY;
@@ -202,10 +202,10 @@ reg `PREFIX prefix `ARRAY;
 reg `WORD ir `ARRAY;   	// Register that holds instruction spec code
 reg torf `ARRAY;       	// True or false register
 reg preEmpty `ARRAY;	// Register describing the state of pre (loaded = 0, not loaded = 1)
-reg preFlag `ARRAY 	// Flag used to alert preEmpty owner that pre needs to be written
-reg writeFlag `Array	// Flag to determine whether to write to the stack or not
+reg preFlag `ARRAY; 	// Flag used to alert preEmpty owner that pre needs to be written
+reg writeFlag `ARRAY;	// Flag to determine whether to write to the stack or not
 reg thread;
-reg halt `ARRAY
+reg halt `ARRAY;
 
 
 always @ (reset) begin
