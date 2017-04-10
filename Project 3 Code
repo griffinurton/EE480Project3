@@ -258,10 +258,8 @@ case (ir[thread] `Opcode)
 
     //GET:  d=sp+1; s=sp-unsigned(immed12); ++sp; reg[d]=reg[s]
     `OPget: begin 
-    		regfile[sp + 1] = regfile[sp - ir `Immed]; 
-		sp = sp +1; 
-		s = `Start; 
-		//$display("Get"); 
+    		if(!halt[thread]) begin
+    		
 	end
 
     //POP:  sp-=unsigned(immed12)
