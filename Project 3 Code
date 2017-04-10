@@ -237,7 +237,11 @@ always @(thread) ir[thread] = mainmem[pc[thread]];
 always @(*) begin
 	dest_value[thread] = regfile[thread ? dest[thread] + 256: dest[thread]];
 	src_value[thread] = regfile[thread ? src[thread] + 256 : src[thread]];
-	
+end
+
+alu stackALU(result_value[thread], ir[thread] `Immed, dest_value[thread], src_value[thread]);
+
+always @(*) begin
 
 case (ir[thread] `Opcode)
    	 
@@ -252,9 +256,8 @@ case (ir[thread] `Opcode)
 			
 		`OPtest: begin torf = (src_value[thread] ? 1 : 0); writeFlag[thread] = 0; end
 		
-		default: alu stackALU(result_value[thread], ir[thread] `Immed, dest_value[thread], src_value[thread]);
+		default: writeFlag[thread] = 1;
 			
-
    	endcase
 	dest_value[thread] <= result_value[thread];
     	end
