@@ -242,7 +242,7 @@ case (ir[thread] `Opcode)
    	 
 	`NOimmed:
    	begin
-   	case (ir `Immed)
+   	case (ir[thread] `Immed)
 		 
    		`OPret: begin pc[thread] = src_value[thread]; writeFlag[thread] = 0; end
 
