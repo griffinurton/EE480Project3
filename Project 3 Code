@@ -125,8 +125,8 @@ always @(ir) begin
 	
     `OPget: begin 
     		dest = sp + 1;
-			src = sp - ir `Immed;
-			sp = sp + 1;
+		src = sp - ir `Immed;
+		sp = sp + 1;
 	end
 
     `OPpop: begin 
@@ -135,7 +135,7 @@ always @(ir) begin
 
     `OPput: begin 
     		dest = sp - ir `Immed;
-			src = sp;
+		src = sp;
 	end
 
 
@@ -145,16 +145,18 @@ always @(ir) begin
 	end
    
 
-	`OPpre: begin
+    `OPpre: begin
 		prefix = (ir[11:8] >> 8);
 		preEmpty = 0;
 	end
 
-	`OPpush: begin
+    OPpush: begin
    		 dest = sp + 1;
 		 sp = sp + 1;
    	 end
-	endcase
+endcase
+
+
 preEmpty = (preFlag ? 1 : 0);
 end
 endmodule
