@@ -183,11 +183,10 @@ always @(op, in1, in2) begin
 end
 endmodule
 
-module processor(halt, reset, clk); // operator input removed
-output halt[1:0];
-input clk `ARRAY;
-input reset `ARRAY;
-// reg `STATE s = `Start;	
+module processor(halted, reset, clk); // operator input removed
+output halted;
+input clk;
+input reset;	
 reg `WORD regfile `REGSIZE;
 reg `WORD mainmem `MEMSIZE;
 
@@ -206,6 +205,7 @@ reg preEmpty `ARRAY;	// Register describing the state of pre (loaded = 0, not lo
 reg preFlag `ARRAY 	// Flag used to alert preEmpty owner that pre needs to be written
 reg writeFlag `Array	// Flag to determine whether to write to the stack or not
 reg thread;
+reg halt `ARRAY
 
 
 always @ (reset) begin
@@ -223,6 +223,8 @@ always @ (reset) begin
 	writeFlag[!thread] = 1;
 	$readmemh1(mainmem);
 end
+
+always@(*) begin halted = halt[1] & halt[0]; end
 
 // Toggle thread each clock cycle
 always@(posedge clk) thread = !thread;
