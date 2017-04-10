@@ -23,7 +23,7 @@
 `define OPget 4'b0001
 `define OPpop 4'b0010
 `define OPput 4'b0011
-`define OPcall 4'b 0100
+`define OPcall 4'b0100
 `define OPjumpf 4'b0101
 `define OPjump 4'b0110
 `define OPjumpt 4'b0111
@@ -46,11 +46,12 @@
 
 
 
-module decode(sp, dest, src, prefix, preEmpty, preFlag, ir);
+module decode(sp, dest, src, prefix, preEmpty, isJump, preFlag, ir);
 output reg `HALFWORD sp;
 output reg `WORD dest;
 output reg `WORD src;
 output reg `PREFIX prefix;
+output reg isJump;
 output reg preEmpty;
 input preFlag;
 input `WORD ir;
@@ -143,6 +144,7 @@ always @(ir) begin
     `OPcall: begin
 		dest = sp + 1;
 		sp = sp + 1;
+		isJump = 1;
 	end
    
 
@@ -155,6 +157,10 @@ always @(ir) begin
    		 dest = sp + 1;
 		 sp = sp + 1;
    	 end
+
+	`OPjumpf: begin isJump = 1; end
+	`OPjump: begin isJump = 1; end
+	`OPjumpt: begin isJump = 1; end
 endcase
 
 
@@ -169,9 +175,9 @@ input wire `Immed op;
 input wire `WORD in1; 
 input wire `WORD in2;
 
-always @(op, in1, in2) begin
+always @(op) begin
   case (op) // in1 = dest_value, in2 = src_value
-    `OPadd: begin result = in1 + in2; end
+    `OPadd: begin result = in1 + in2; $display("Add"); end
     `OPand: begin result = in1 & in2; end
     `OPdup: begin result = in2; end
     //`OPload: begin result = mainmem[in1]; end
@@ -196,6 +202,7 @@ reg `WORD mainmem `MEMSIZE;
 reg `HALFWORD sp `ARRAY;
 wire `HALFWORD sp_wire;
 reg `WORD pc `ARRAY;
+reg `WORD new_pc `ARRAY;
 reg `WORD dest `ARRAY; 
 wire `WORD dest_wire;
 reg `WORD src `ARRAY;
@@ -212,6 +219,7 @@ wire preEmpty_wire;
 reg preFlag `ARRAY; 	// Flag used to alert preEmpty owner that pre needs to be written
 reg writeFlag `ARRAY;	// Flag to determine whether to write to the stack or not
 reg thread;
+wire isJump;
 reg halt `ARRAY;
 
 
@@ -222,6 +230,7 @@ always @ (reset) begin
 	halt[1] = 0;
 	sp[0] = 0;
 	sp[1] = 256;
+//sp_wire = 0;
 	preEmpty[0] = 1;
 	preEmpty[1] = 1;
 	writeFlag[0] = 1;
@@ -233,7 +242,7 @@ end
 always@(*) begin halted = halt[1] & halt[0]; end
 
 // Toggle thread each clock cycle
-always@(posedge clk) thread = !thread;
+always@(posedge clk) thread <= !thread;
 
 always @(*) begin 
 	sp[thread] = sp_wire;
@@ -243,10 +252,10 @@ always @(*) begin
 	preEmpty[thread] = preEmpty_wire;
 end
 
-decode mydecode(sp_wire, dest_wire, src_wire, prefix_wire, preEmpty_wire, preFlag[thread], ir[thread]);
+decode mydecode(sp_wire, dest_wire, src_wire, prefix_wire, preEmpty_wire, isJump, preFlag[thread], ir[thread]);
 
-always @(posedge clk) begin ir[thread] = mainmem[pc[thread]];
-pc[thread] = pc[thread] + 2;
+always @(posedge clk) begin ir[thread] = mainmem[pc[thread]]; $display("%h",ir[0]);$display("%h",ir[1]);
+pc[thread] = (isJump ? new_pc[thread] : pc[thread] + 2);
 end
 
 always @(posedge clk) begin
@@ -270,7 +279,7 @@ case (ir[thread] `Opcode)
 
    		`OPstore: begin mainmem[dest_value[thread]] = src_value[thread]; writeFlag[thread] = 0; end
 
-   		`OPsys: begin halt[thread] = 1; writeFlag[thread] = 0; end
+   		`OPsys: begin $display("Sys instruction"); halt[thread] = 1; writeFlag[thread] = 0; end
 			
 		`OPtest: begin torf[thread] = (src_value[thread] ? 1 : 0); writeFlag[thread] = 0; end
 		
@@ -301,11 +310,12 @@ case (ir[thread] `Opcode)
 		if(!halt[thread]) begin
 			dest_value[thread] = pc[thread] + 1;
 			if(!preEmpty[thread]) begin
-		   		pc[thread] = {prefix[thread], ir[thread] `Immed};
+		   		new_pc[thread] = {prefix[thread], ir[thread] `Immed};
 		   		preFlag[thread] = 1;
    	 		end
-    			else begin pc[thread] = ir[thread] `Immed; end
+    			else begin new_pc[thread] = ir[thread] `Immed; end
 		end
+$display("Call %d", new_pc[thread]);
 	end
 
 	//JUMPF: if (!torf) pc=prefix({(pc>>12), immed12});
@@ -314,13 +324,14 @@ case (ir[thread] `Opcode)
 			writeFlag[thread] = 0;
     			if(!torf[thread]) begin
    	 			if(!preEmpty[thread]) begin
-   					pc[thread] = {prefix[thread], ir[thread] `Immed};
+   					new_pc[thread] = {prefix[thread], ir[thread] `Immed}; 
    					preFlag[thread] = 1;
     				end
     				else begin
-        				pc[thread] = ir[thread] `Immed;
+        				new_pc[thread] = ir[thread] `Immed;
     				end
     			end
+$display("JumpF to %d", new_pc[thread]);
     		end
 	end
 
@@ -330,13 +341,14 @@ case (ir[thread] `Opcode)
 		if(!halt[thread]) begin
 			writeFlag[thread] = 0;
 			if(!preEmpty[thread]) begin
-   				pc[thread] = {prefix[thread], ir[thread] `Immed};
+   				new_pc[thread] = {prefix[thread], ir[thread] `Immed};
    				preFlag[thread] = 1;
 			end
 			else begin
-    			pc[thread] = ir[thread] `Immed;
+    			new_pc[thread] = ir[thread] `Immed;
 			end
 		end
+$display("Jump to %d", new_pc[thread]);
 	end
 
 
@@ -346,12 +358,12 @@ case (ir[thread] `Opcode)
 			writeFlag[thread] = 0;
 			if(torf[thread]) begin
 				if(!preEmpty[thread]) begin
-				pc[thread] = {prefix[thread], ir[thread] `Immed};
+				new_pc[thread] = {prefix[thread], ir[thread] `Immed};
 				preFlag[thread] = 1;
         			end
 			end
     			else begin
-        			pc[thread] = ir[thread] `Immed;
+        			new_pc[thread] = ir[thread] `Immed;
         		end
 		end
 	end
