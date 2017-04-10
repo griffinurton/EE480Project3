@@ -150,7 +150,7 @@ always @(ir) begin
 		preEmpty = 0;
 	end
 
-    OPpush: begin
+    `OPpush: begin
    		 dest = sp + 1;
 		 sp = sp + 1;
    	 end
@@ -287,6 +287,7 @@ case (ir[thread] `Opcode)
 		   		preFlag[thread] = 1;
    	 		end
     			else begin pc[thread] = ir[thread] `Immed; end
+		end
 	end
 
 	//JUMPF: if (!torf) pc=prefix({(pc>>12), immed12});
@@ -340,12 +341,12 @@ case (ir[thread] `Opcode)
 	//PUSH: d=sp+1; ++sp; reg[d]=prefix(sign_extend(immed12));
 	`OPpush: begin
 		if(!halt[thread]) begin
-			prefix = (ir[thread][11] ? 4b'1111 : 4'b0000);
-			dest_value[thread] = {prefix, ir[thread] `Immed}
+			prefix[thread] = (ir[thread][11] ? 4'b1111 : 4'b0000);
+			dest_value[thread] = {prefix, ir[thread] `Immed};
 		end
    	 end
 	 
-	 default: begin writeFlag = 0; end;
+	 default: begin writeFlag[thread] = 0; end
 endcase
 end
 always @(*)
@@ -356,7 +357,7 @@ endmodule // processor
 module testbench;
 	reg reset = 0;
 	reg clk = 0;
-	wire halted `ARRAY;
+	wire halted;
 	processor PE(halted, reset, clk);
 	initial begin
   	$dumpfile;
